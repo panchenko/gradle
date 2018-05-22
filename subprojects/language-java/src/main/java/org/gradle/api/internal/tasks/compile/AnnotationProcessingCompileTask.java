@@ -22,6 +22,7 @@ import org.gradle.api.internal.tasks.compile.processing.AnnotationProcessorDecla
 import org.gradle.api.internal.tasks.compile.processing.IncrementalAnnotationProcessorType;
 import org.gradle.api.internal.tasks.compile.processing.IsolatingProcessor;
 import org.gradle.api.internal.tasks.compile.processing.NonIncrementalProcessor;
+import org.gradle.internal.classloader.FilteringClassLoader;
 import org.gradle.internal.classpath.DefaultClassPath;
 import org.gradle.internal.concurrent.CompositeStoppable;
 
@@ -38,8 +39,12 @@ import java.util.Set;
  * Wraps another {@link JavaCompiler.CompilationTask} and sets up its annotation processors
  * according to the provided processor declarations and processor path. Incremental processors
  * are decorated in order to validate their behavior.
+ *
+ * This class serves a purpose even if incremental compilation is disabled - Javac's default
+ * processor detection mechanism uses a {@link java.util.ServiceLoader}, which has a file descriptor
+ * leak on Java 8 and below. This is fixed by using our own leak-free detection.
  */
-class IncrementalAnnotationProcessingCompileTask implements JavaCompiler.CompilationTask {
+class AnnotationProcessingCompileTask implements JavaCompiler.CompilationTask {
 
     private final JavaCompiler.CompilationTask delegate;
     private final Set<AnnotationProcessorDeclaration> processorDeclarations;
@@ -49,7 +54,7 @@ class IncrementalAnnotationProcessingCompileTask implements JavaCompiler.Compila
     private URLClassLoader processorClassloader;
     private boolean called;
 
-    IncrementalAnnotationProcessingCompileTask(JavaCompiler.CompilationTask delegate, Set<AnnotationProcessorDeclaration> processorDeclarations, List<File> annotationProcessorPath, AnnotationProcessingResult result) {
+    AnnotationProcessingCompileTask(JavaCompiler.CompilationTask delegate, Set<AnnotationProcessorDeclaration> processorDeclarations, List<File> annotationProcessorPath, AnnotationProcessingResult result) {
         this.delegate = delegate;
         this.processorDeclarations = processorDeclarations;
         this.annotationProcessorPath = annotationProcessorPath;
@@ -81,21 +86,39 @@ class IncrementalAnnotationProcessingCompileTask implements JavaCompiler.Compila
     }
 
     private void setupProcessors() {
-        processorClassloader = new URLClassLoader(DefaultClassPath.of(annotationProcessorPath).getAsURLArray());
+        this.processorClassloader = createProcessorClassLoader();
         List<Processor> processors = new ArrayList<Processor>(processorDeclarations.size());
         for (AnnotationProcessorDeclaration declaredProcessor : processorDeclarations) {
-            try {
-                Class<?> processorClass = processorClassloader.loadClass(declaredProcessor.getClassName());
-                Processor processor = (Processor) processorClass.newInstance();
-                IncrementalAnnotationProcessorType defaultType = declaredProcessor.getType();
-                IncrementalAnnotationProcessorType type = getProcessorType(processor, defaultType);
-                processor = decorateIfIncremental(processor, type);
-                processors.add(processor);
-            } catch (Exception e) {
-                throw new IllegalArgumentException(e);
-            }
+            Class<?> processorClass = loadProcessor(declaredProcessor);
+            Processor processor = instantiateProcessor(processorClass);
+            IncrementalAnnotationProcessorType defaultType = declaredProcessor.getType();
+            IncrementalAnnotationProcessorType type = getProcessorType(processor, defaultType);
+            processor = decorateIfIncremental(processor, type);
+            processors.add(processor);
         }
         delegate.setProcessors(processors);
+    }
+
+    private URLClassLoader createProcessorClassLoader() {
+        FilteringClassLoader.Spec spec = new FilteringClassLoader.Spec();
+        spec.allowPackage("com.sun.tools.javac");
+        return new URLClassLoader(DefaultClassPath.of(annotationProcessorPath).getAsURLArray(), new FilteringClassLoader(Processor.class.getClassLoader(), spec));
+    }
+
+    private Class<?> loadProcessor(AnnotationProcessorDeclaration declaredProcessor) {
+        try {
+            return processorClassloader.loadClass(declaredProcessor.getClassName());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Annotation processor '" + declaredProcessor.getClassName() + "' not found");
+        }
+    }
+
+    private Processor instantiateProcessor(Class<?> processorClass) {
+        try {
+            return (Processor) processorClass.newInstance();
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Could not instantiate annotation processor '" + processorClass.getName() + "'");
+        }
     }
 
     private IncrementalAnnotationProcessorType getProcessorType(Processor processor, IncrementalAnnotationProcessorType defaultType) {

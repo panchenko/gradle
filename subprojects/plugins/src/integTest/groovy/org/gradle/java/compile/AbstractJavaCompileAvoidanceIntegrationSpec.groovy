@@ -51,10 +51,6 @@ include 'a', 'b'
     def useJar() {
         buildFile << """
             allprojects {
-                tasks.withType(JavaCompile) {
-                    // Use forking to work around javac's jar cache
-                    options.fork = true
-                }
                 jar {
                     from emptyDirs
                 }

@@ -21,5 +21,4 @@ class IncrementalJavaCompileAvoidanceAgainstJarIntegrationSpec extends AbstractJ
         useJar()
         useIncrementalCompile()
     }
-
 }

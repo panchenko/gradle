@@ -20,7 +20,6 @@ import org.gradle.integtests.fixtures.AbstractIntegrationSpec
 import org.gradle.integtests.fixtures.Sample
 import org.gradle.integtests.fixtures.UsesSample
 import org.gradle.test.fixtures.archive.JarTestFixture
-import org.gradle.test.fixtures.file.LeaksFileHandles
 import org.junit.Rule
 
 import static org.hamcrest.Matchers.containsString
@@ -30,7 +29,6 @@ class SamplesGroovyMultiProjectIntegrationTest extends AbstractIntegrationSpec {
     private final static String TEST_PROJECT_NAME = "testproject"
 
     @UsesSample("groovy/multiproject")
-    @LeaksFileHandles
     void groovyProjectSamples() {
         def groovySources = ["GroovyPerson", "GroovyJavaPerson"]
         def javaSources = ["JavaPerson"]

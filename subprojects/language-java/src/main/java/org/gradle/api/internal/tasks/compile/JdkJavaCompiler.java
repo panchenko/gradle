@@ -16,10 +16,10 @@
 package org.gradle.api.internal.tasks.compile;
 
 import org.gradle.api.JavaVersion;
-import org.gradle.api.internal.tasks.compile.processing.AnnotationProcessorDeclaration;
 import org.gradle.api.internal.tasks.compile.reflect.SourcepathIgnoringProxy;
 import org.gradle.api.tasks.WorkResult;
 import org.gradle.internal.Factory;
+import org.gradle.internal.concurrent.CompositeStoppable;
 import org.gradle.language.base.internal.compile.Compiler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +31,6 @@ import java.io.Serializable;
 import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 
 public class JdkJavaCompiler implements Compiler<JavaCompileSpec>, Serializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(JdkJavaCompiler.class);
@@ -66,10 +65,8 @@ public class JdkJavaCompiler implements Compiler<JavaCompileSpec>, Serializable 
         }
         JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, null, options, spec.getClasses(), compilationUnits);
 
-        Set<AnnotationProcessorDeclaration> annotationProcessors = spec.getEffectiveAnnotationProcessors();
-        if (annotationProcessors != null) {
-            task = new IncrementalAnnotationProcessingCompileTask(task, annotationProcessors, spec.getAnnotationProcessorPath(), result.getAnnotationProcessingResult());
-        }
+        task = new AnnotationProcessingCompileTask(task, spec.getEffectiveAnnotationProcessors(), spec.getAnnotationProcessorPath(), result.getAnnotationProcessingResult());
+        task = new ResourceCleaningCompilationTask(task, CompositeStoppable.stoppable(fileManager));
         return task;
     }
 
