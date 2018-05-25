@@ -45,7 +45,9 @@ class DefaultFileSystemSnapshotterTest extends Specification {
         snapshot.content == new FileHashSnapshot(fileHasher.hash(f), f.lastModified())
 
         def snapshot2 = snapshotter.snapshotSelf(f)
-        snapshot2.is(snapshot)
+        snapshot2.content == snapshot.content
+        snapshot2.path == snapshot.path
+        snapshot2.relativePath == snapshot.relativePath
     }
 
     def "fetches details of a directory and caches the result"() {
@@ -61,7 +63,9 @@ class DefaultFileSystemSnapshotterTest extends Specification {
         snapshot.content == DirContentSnapshot.instance
 
         def snapshot2 = snapshotter.snapshotSelf(d)
-        snapshot2.is(snapshot)
+        snapshot2.content == snapshot.content
+        snapshot2.path == snapshot.path
+        snapshot2.relativePath == snapshot.relativePath
     }
 
     def "fetches details of a missing file and caches the result"() {
@@ -77,7 +81,9 @@ class DefaultFileSystemSnapshotterTest extends Specification {
         snapshot.content == MissingFileContentSnapshot.instance
 
         def snapshot2 = snapshotter.snapshotSelf(f)
-        snapshot2.is(snapshot)
+        snapshot2.content == snapshot.content
+        snapshot2.path == snapshot.path
+        snapshot2.relativePath == snapshot.relativePath
     }
 
     def "fetches details of a directory hierarchy and caches the result"() {
