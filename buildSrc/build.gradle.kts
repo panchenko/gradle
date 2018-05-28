@@ -76,6 +76,8 @@ allprojects {
         maven(url = "https://repo.gradle.org/gradle/libs-snapshots")
         gradlePluginPortal()
     }
+
+    apply { from("$rootDir/../gradle/shared-with-buildSrc/mirrors.gradle.kts") }
 }
 
 dependencies {

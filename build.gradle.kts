@@ -145,6 +145,8 @@ allprojects {
             ignore("org/gradle/build-receipt.properties")
         }
     }
+
+    apply { from("$rootDir/gradle/shared-with-buildSrc/mirrors.gradle.kts") }
 }
 
 apply(plugin = "gradlebuild.cleanup")
