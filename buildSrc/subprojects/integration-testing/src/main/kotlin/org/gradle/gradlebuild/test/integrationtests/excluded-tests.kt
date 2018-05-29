@@ -10,8 +10,6 @@ val excludedTests = listOf(
     "DaemonGroovyCompilerIntegrationTest" to listOf(VERSION_1_9, VERSION_1_10),
     "DaemonJavaCompilerIntegrationTest" to listOf(VERSION_1_9, VERSION_1_10),
     "InProcessJavaCompilerIntegrationTest" to listOf(VERSION_1_9, VERSION_1_10),
-    "JacocoPluginMultiVersionIntegrationTest" to listOf(VERSION_1_9, VERSION_1_10),
-    "JacocoPluginCoverageVerificationIntegrationTest" to listOf(VERSION_1_9, VERSION_1_10),
 
     // Caused by: java.lang.IncompatibleClassChangeError: Method Person.getName()Ljava/lang/String; must be InterfaceMethodref constant
     // Fail since build 125
